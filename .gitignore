@@ -1,0 +1,29 @@
+node_modules
+# --- Python ---
+__pycache__/
+*.py[cod]
+venv/
+.env
+
+# --- Node.js ---
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+package-lock.json
+
+# --- Local/IDE/System ---
+.DS_Store
+.vscode/
+.idea/
+
+# --- App-generated files ---
+outputs/
+uploads/
+*.log
+*.tmp
+*.bak
+diffusers-cache/
+
+models/stable-diffusion-v1-5/text_encoder/pytorch_model.bin
+models/stable-diffusion-v1-5/unet/diffusion_pytorch_model.safetensors
+models/stable-diffusion-v1-5/vae/diffusion_pytorch_model.safetensors

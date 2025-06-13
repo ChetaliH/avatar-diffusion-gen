@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Avatar Texture Studio</title>
+  <script src="https://cdn.babylonjs.com/babylon.js"></script>
+  <script src="https://cdn.babylonjs.com/loaders/babylon.glTF2FileLoader.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      height: 100vh;
+      overflow: hidden;
+      color: white;
+    }
+
+    .container {
+      display: flex;
+      height: 100vh;
+    }
+
+    .sidebar {
+      width: 320px;
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(20px);
+      border-right: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 30px;
+      display: flex;
+      flex-direction: column;
+      gap: 25px;
+      overflow-y: auto;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 10px;
+    }
+
+    .header h1 {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 5px;
+      background: linear-gradient(45deg, #fff, #e0e0e0);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .header p {
+      font-size: 14px;
+      opacity: 0.8;
+    }
+
+    .upload-section {
+      background: rgba(255, 255, 255, 0.1);
+      border: 2px dashed rgba(255, 255, 255, 0.3);
+      border-radius: 16px;
+      padding: 30px 20px;
+      text-align: center;
+      transition: all 0.3s ease;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .upload-section:hover {
+      border-color: rgba(255, 255, 255, 0.6);
+      background: rgba(255, 255, 255, 0.15);
+      transform: translateY(-2px);
+    }
+
+    .upload-section.dragover {
+      border-color: #4CAF50;
+      background: rgba(76, 175, 80, 0.1);
+    }
+
+    .upload-icon {
+      width: 60px;
+      height: 60px;
+      margin: 0 auto 15px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+    }
+
+    .upload-text h3 {
+      margin-bottom: 8px;
+      font-size: 18px;
+    }
+
+    .upload-text p {
+      opacity: 0.8;
+      font-size: 14px;
+      line-height: 1.4;
+    }
+
+    #uploadInput {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    .preview-section {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 20px;
+      display: none;
+    }
+
+    .preview-section.active {
+      display: block;
+    }
+
+    .preview-image {
+      width: 100%;
+      height: 120px;
+      object-fit: cover;
+      border-radius: 12px;
+      margin-bottom: 15px;
+    }
+
+    .preview-info {
+      font-size: 14px;
+      opacity: 0.9;
+    }
+
+    .controls-section {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 20px;
+    }
+
+    .control-group {
+      margin-bottom: 20px;
+    }
+
+    .control-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .slider {
+      width: 100%;
+      height: 6px;
+      border-radius: 3px;
+      background: rgba(255, 255, 255, 0.2);
+      outline: none;
+    }
+
+    .slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: white;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    }
+
+    .btn {
+      width: 100%;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      background: linear-gradient(45deg, #4CAF50, #45a049);
+      color: white;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+    }
+
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .btn-secondary {
+      background: linear-gradient(45deg, #ff6b6b, #ee5a52);
+    }
+
+    .btn-secondary:hover {
+      box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
+    }
+
+    .viewer {
+      flex: 1;
+      position: relative;
+      background: rgba(0, 0, 0, 0.2);
+    }
+
+    #renderCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .loading-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.8);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+
+    .loading-overlay.active {
+      display: flex;
+    }
+
+    .spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid rgba(255, 255, 255, 0.3);
+      border-top: 4px solid white;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .status-bar {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      right: 20px;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(10px);
+      padding: 15px 20px;
+      border-radius: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 14px;
+    }
+
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #4CAF50;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .error-message {
+      background: rgba(255, 107, 107, 0.1);
+      border: 1px solid rgba(255, 107, 107, 0.3);
+      color: #ff6b6b;
+      padding: 15px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      display: none;
+    }
+
+    .success-message {
+      background: rgba(76, 175, 80, 0.1);
+      border: 1px solid rgba(76, 175, 80, 0.3);
+      color: #4CAF50;
+      padding: 15px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      display: none;
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        flex-direction: column;
+      }
+      
+      .sidebar {
+        width: 100%;
+        height: auto;
+        max-height: 40vh;
+      }
+      
+      .viewer {
+        height: 60vh;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="sidebar">
+      <div class="header">
+        <h1>Avatar Texture Studio</h1>
+        <p>Upload and apply custom textures to your 3D avatar</p>
+      </div>
+
+      <div class="error-message" id="errorMessage"></div>
+      <div class="success-message" id="successMessage"></div>
+
+      <div class="upload-section" id="uploadSection">
+        <div class="upload-icon">📁</div>
+        <div class="upload-text">
+          <h3>Upload Texture</h3>
+          <p>Drag & drop an image file or click to browse<br>
+          <small>Supports: JPG, PNG, WEBP (Max 10MB)</small></p>
+        </div>
+        <input type="file" id="uploadInput" accept="image/*" />
+      </div>
+
+      <div class="preview-section" id="previewSection">
+        <img class="preview-image" id="previewImage" alt="Preview" />
+        <div class="preview-info">
+          <strong id="fileName"></strong><br>
+          <span id="fileSize"></span>
+        </div>
+      </div>
+
+      <div class="controls-section">
+        <div class="control-group">
+          <label for="brightnessSlider">Brightness</label>
+          <input type="range" id="brightnessSlider" class="slider" min="0" max="2" step="0.1" value="1">
+        </div>
+        
+        <div class="control-group">
+          <label for="contrastSlider">Contrast</label>
+          <input type="range" id="contrastSlider" class="slider" min="0" max="2" step="0.1" value="1">
+        </div>
+
+        <button class="btn" id="applyBtn" disabled>Apply Texture</button>
+        <button class="btn btn-secondary" id="resetBtn" style="margin-top: 10px;">Reset Avatar</button>
+      </div>
+    </div>
+
+    <div class="viewer">
+      <canvas id="renderCanvas"></canvas>
+      <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+      </div>
+      <div class="status-bar">
+        <div class="status-indicator">
+          <div class="status-dot"></div>
+          <span id="statusText">Ready</span>
+        </div>
+        <div id="meshInfo">Loading 3D model...</div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    // Initialize Babylon.js
+    const canvas = document.getElementById("renderCanvas");
+    const engine = new BABYLON.Engine(canvas, true);
+    let scene, shirtMesh, originalMaterial;
+    
+    // UI Elements
+    const uploadInput = document.getElementById("uploadInput");
+    const uploadSection = document.getElementById("uploadSection");
+    const previewSection = document.getElementById("previewSection");
+    const previewImage = document.getElementById("previewImage");
+    const fileName = document.getElementById("fileName");
+    const fileSize = document.getElementById("fileSize");
+    const applyBtn = document.getElementById("applyBtn");
+    const resetBtn = document.getElementById("resetBtn");
+    const loadingOverlay = document.getElementById("loadingOverlay");
+    const statusText = document.getElementById("statusText");
+    const meshInfo = document.getElementById("meshInfo");
+    const errorMessage = document.getElementById("errorMessage");
+    const successMessage = document.getElementById("successMessage");
+    const brightnessSlider = document.getElementById("brightnessSlider");
+    const contrastSlider = document.getElementById("contrastSlider");
+
+    let currentFile = null;
+
+    // Utility functions
+    function showLoading() {
+      loadingOverlay.classList.add('active');
+    }
+
+    function hideLoading() {
+      loadingOverlay.classList.remove('active');
+    }
+
+    function showError(message) {
+      errorMessage.textContent = message;
+      errorMessage.style.display = 'block';
+      successMessage.style.display = 'none';
+      setTimeout(() => {
+        errorMessage.style.display = 'none';
+      }, 5000);
+    }
+
+    function showSuccess(message) {
+      successMessage.textContent = message;
+      successMessage.style.display = 'block';
+      errorMessage.style.display = 'none';
+      setTimeout(() => {
+        successMessage.style.display = 'none';
+      }, 3000);
+    }
+
+    function updateStatus(text) {
+      statusText.textContent = text;
+    }
+
+    function formatFileSize(bytes) {
+      if (bytes === 0) return '0 Bytes';
+      const k = 1024;
+      const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    // Scene creation
+    const createScene = async () => {
+      scene = new BABYLON.Scene(engine);
+      
+      // Camera setup
+      const camera = new BABYLON.ArcRotateCamera("camera", Math.PI / 2, Math.PI / 2.5, 3, BABYLON.Vector3.Zero(), scene);
+      camera.attachControl(canvas, true);
+      camera.wheelPrecision = 50;
+      camera.pinchPrecision = 200;
+      
+      // Lighting
+      const light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(1, 1, 0), scene);
+      light.intensity = 0.7;
+      
+      const dirLight = new BABYLON.DirectionalLight("dirLight", new BABYLON.Vector3(-1, -1, -1), scene);
+      dirLight.intensity = 0.5;
+
+      try {
+        updateStatus("Loading 3D model...");
+        await BABYLON.SceneLoader.AppendAsync("https://files.catbox.moe/6dyjky.glb", "", scene);
+        
+        // Find the shirt mesh
+        shirtMesh = scene.getMeshByName("Wolf3D_Outfit_Top");
+        if (shirtMesh) {
+          originalMaterial = shirtMesh.material ? shirtMesh.material.clone("originalMat") : null;
+          meshInfo.textContent = `Model loaded • ${scene.meshes.length} meshes`;
+          updateStatus("Ready for texture upload");
+        } else {
+          meshInfo.textContent = "Model loaded • Shirt mesh not found";
+          showError("Could not find shirt mesh in the 3D model");
+        }
+      } catch (error) {
+        console.error("Failed to load 3D model:", error);
+        showError("Failed to load 3D model. Please check your connection.");
+        updateStatus("Model loading failed");
+      }
+
+      return scene;
+    };
+
+    // Drag and drop functionality
+    uploadSection.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      uploadSection.classList.add('dragover');
+    });
+
+    uploadSection.addEventListener('dragleave', () => {
+      uploadSection.classList.remove('dragover');
+    });
+
+    uploadSection.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadSection.classList.remove('dragover');
+      const files = e.dataTransfer.files;
+      if (files.length > 0) {
+        handleFileSelect(files[0]);
+      }
+    });
+
+    // File input handler
+    uploadInput.addEventListener("change", (e) => {
+      if (e.target.files.length > 0) {
+        handleFileSelect(e.target.files[0]);
+      }
+    });
+
+    function handleFileSelect(file) {
+      // Validate file
+      if (!file.type.startsWith('image/')) {
+        showError('Please select a valid image file');
+        return;
+      }
+
+      if (file.size > 10 * 1024 * 1024) { // 10MB limit
+        showError('File size must be less than 10MB');
+        return;
+      }
+
+      currentFile = file;
+      
+      // Show preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        previewImage.src = e.target.result;
+        fileName.textContent = file.name;
+        fileSize.textContent = formatFileSize(file.size);
+        previewSection.classList.add('active');
+        applyBtn.disabled = false;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // Apply texture
+    applyBtn.addEventListener('click', async () => {
+      if (!currentFile || !shirtMesh) return;
+
+      showLoading();
+      updateStatus("Generating texture...");
+      applyBtn.disabled = true;
+
+      try {
+        const formData = new FormData();
+        formData.append("image", currentFile);
+
+        const response = await fetch("/generate-texture", {
+          method: "POST",
+          body: formData,
+        });
+
+        const data = await response.json();
+        
+        if (data?.output && data.output.length > 0) {
+          const textureURL = data.output[0];
+          
+          // Create new material with texture
+          const texture = new BABYLON.Texture(textureURL, scene);
+          const material = new BABYLON.StandardMaterial("shirtMat", scene);
+          material.diffuseTexture = texture;
+          material.backFaceCulling = false;
+          
+          // Apply brightness and contrast
+          material.diffuseTexture.level = parseFloat(brightnessSlider.value);
+          
+          shirtMesh.material = material;
+          
+          showSuccess("Texture applied successfully!");
+          updateStatus("Texture applied");
+        } else {
+          throw new Error("Texture generation failed");
+        }
+      } catch (error) {
+        console.error("Texture application failed:", error);
+        showError("Failed to apply texture. Please try again.");
+        updateStatus("Texture application failed");
+      } finally {
+        hideLoading();
+        applyBtn.disabled = false;
+      }
+    });
+
+    // Reset avatar
+    resetBtn.addEventListener('click', () => {
+      if (shirtMesh && originalMaterial) {
+        shirtMesh.material = originalMaterial;
+        showSuccess("Avatar reset to original state");
+        updateStatus("Avatar reset");
+      }
+    });
+
+    // Brightness and contrast controls
+    brightnessSlider.addEventListener('input', (e) => {
+      if (shirtMesh && shirtMesh.material && shirtMesh.material.diffuseTexture) {
+        shirtMesh.material.diffuseTexture.level = parseFloat(e.target.value);
+      }
+    });
+
+    contrastSlider.addEventListener('input', (e) => {
+      if (shirtMesh && shirtMesh.material && shirtMesh.material.diffuseTexture) {
+        // Contrast adjustment through material properties
+        const contrast = parseFloat(e.target.value);
+        shirtMesh.material.diffuseColor = new BABYLON.Color3(contrast, contrast, contrast);
+      }
+    });
+
+    // Initialize scene
+    scene = await createScene();
+    engine.runRenderLoop(() => scene.render());
+
+    // Handle window resize
+    window.addEventListener("resize", () => {
+      engine.resize();
+    });
+  </script>
+</body>
+</html>
